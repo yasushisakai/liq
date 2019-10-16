@@ -5,8 +5,7 @@ use std::path::Path;
 use std::error::Error;
 use std::io::BufReader;
 use std::fs::File;
-use serde_json::Value;
-use liquid_demons::{create_matrix, calculate, Setting};
+use liquid_demons::{create_matrix, calculate, poll_result, Setting, PollResult};
 
 pub fn main () {
 
@@ -27,34 +26,23 @@ pub fn main () {
 
     println!("{}", &settings_path.display());
 
-    let settings = read_settings_from_file(&settings_path).unwrap();
+    let settings = read_settings_from_file(&settings_path).expect("could not read file");
     // let voters = create_matrix_from_settings(settings);
     //
     let m = create_matrix(&settings);
     
-    let result = calculate(m, settings.voters.len());
+    let calulation_result = calculate(m, settings.voters.len());
+    let result = poll_result(&settings.voters, &settings.policies, calulation_result);
 
-    pretty_print(result, &settings);
+    pretty_print(&result);
 
 }
 
-fn pretty_print(result: (Vec<f64>, Vec<f64>), settings: &Setting) {
+fn pretty_print(result: &PollResult) {
 
-    let (poll, influence) = result;
+    println!("*** result ***\n");
 
-    println!("*** result ***");
-
-    println!("\npolices/plans:");
-
-    for (i, r) in poll.iter().enumerate() {
-       println!("{}:\t{}", &settings.policies.get(i).unwrap(), r);
-    }
-
-    println!("\ninfluence:");
-
-    for (i, v) in influence.iter().enumerate() {
-        println!("{}:\t{}", &settings.voters.get(i).unwrap(), v)
-    }
+    println!("{:?}", result);
 
     println!("\n*** end result ***\n");
 

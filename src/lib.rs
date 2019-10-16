@@ -1,6 +1,8 @@
+
+use std::collections::HashMap;
 use ndarray::{stack, Array, Array2, Axis, s};
 use serde::Deserialize;
-use serde_json::{json, Value, Map};
+use serde_json::{Value, Map};
 
 #[derive(Deserialize)]
 pub struct Setting {
@@ -8,6 +10,12 @@ pub struct Setting {
     pub voters: Vec<String>,
     pub policies: Vec<String>,
     pub votes: Value,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct PollResult {
+    pub votes: HashMap<String, f64>,
+    pub influence: HashMap<String, f64>
 }
 
 const ITERATION: u32 = 1000;
@@ -71,4 +79,25 @@ pub fn calculate(m: Array2::<f64>, num_voters: usize) -> (Vec<f64>, Vec<f64>){
     let voters_influence = (sum_row / sum.diag()).to_vec();
 
     (vote_results, voters_influence)
+}
+
+pub fn poll_result(voters: &Vec<String>, policies: &Vec<String>, result: (Vec<f64>, Vec<f64>)) -> PollResult {
+    let mut votes_r = HashMap::new();
+
+    let mut influences_r = HashMap::new();
+
+    let (votes, influence) = result;
+
+    for (i, p) in policies.iter().enumerate() {
+        votes_r.insert(p.to_owned(), votes.get(i).unwrap().to_owned());
+    }
+
+    for (i, inf) in voters.iter().enumerate() {
+        influences_r.insert(inf.to_owned(), influence.get(i).unwrap().to_owned());
+    }
+
+    PollResult {
+        votes: votes_r,
+        influence: influences_r,
+    }
 }
