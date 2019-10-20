@@ -69,6 +69,9 @@ pub fn main () {
         if matches.is_present("all") {
             pretty_print_settings(&settings).unwrap();
         }
+
+
+
         pretty_print_result(&result).expect("something went wron when printing");
     }
 }
@@ -83,6 +86,10 @@ fn pretty_print_result(result: &PollResult) -> Result<(), Box<dyn Error>> {
     let mut influence = Vec::from_iter(&result.influence);
     influence.sort_by(|&(_, a), &(_, b)| b.partial_cmp(&a).unwrap_or(Ordering::Equal));
 
+    t.attr(term::Attr::Bold)?;
+    write!(t, "result\n  policies:\n")?;
+    t.reset()?;
+
     t.fg(term::color::GREEN)?;
     t.attr(term::Attr::Bold)?;
     // t.fg(term::color::WHITE).unwrap();
@@ -90,12 +97,16 @@ fn pretty_print_result(result: &PollResult) -> Result<(), Box<dyn Error>> {
     for (p, v) in &votes {
         t.attr(term::Attr::Bold)?;
         t.fg(term::color::GREEN)?;
-        write!(t, "{}", p)?;
+        write!(t, "  {:10} ", p)?;
         t.reset()?;
-        write!(t, "\t{:.4}\n", v)?;
+        write!(t, "{:.4}\n", v)?;
     }
 
     write!(t, "\r\n")?;
+
+    t.attr(term::Attr::Bold)?;
+    write!(t, "  influence:\n")?;
+    t.reset()?;
 
     t.fg(term::color::BLUE)?;
     t.attr(term::Attr::Bold)?;
@@ -103,9 +114,9 @@ fn pretty_print_result(result: &PollResult) -> Result<(), Box<dyn Error>> {
     for (inf, v) in &influence {
         t.attr(term::Attr::Bold)?;
         t.fg(term::color::BLUE)?;
-        write!(t, "{}", inf)?;
+        write!(t, "  {:10} ", inf)?;
         t.reset()?;
-        write!(t, "\t{:.4}\n", v)?;
+        write!(t, "{:.4}\n", v)?;
     }
 
     Ok(())
@@ -116,13 +127,75 @@ fn pretty_print_settings(setting: &Setting) -> Result<(), Box<dyn Error>> {
     let mut t = term::stdout().unwrap();
 
     t.attr(term::Attr::Bold)?;
-    write!(t, "title ")?;
+    write!(t, "{:10}", "title ")?;
     t.reset()?;
 
     if let Some(title) = &setting.title {
         write!(t, "{}\n", title)?;
     }
 
+    t.attr(term::Attr::Bold)?;
+    write!(t, "{:10}", "policies")?;
+    t.reset()?;
+
+    t.fg(term::color::GREEN)?; 
+    for p in &setting.policies {
+        write!(t, "{:20} ", p)?;
+    }
+
+    t.reset()?;
+    write!(t, "\n")?;
+
+    t.attr(term::Attr::Bold)?;
+    write!(t, "{:10}","voters")?;
+    t.reset()?;
+
+    t.fg(term::color::BLUE)?; 
+    for v in &setting.voters {
+        write!(t, "{:20} ", v)?;
+    }
+    t.reset()?;
+
+    write!(t, "\n\n")?;
+
+    let votes: &Map<String, Value> = setting.votes.as_object().unwrap();
+
+    t.attr(term::Attr::Bold)?;
+    write!(t, "{}","votes")?;
+    t.reset()?;
+
+    println!(); 
+
+    for (from, vote_value) in Vec::from_iter(votes.iter()) {
+        t.fg(term::color::BLUE)?;
+        t.attr(term::Attr::Bold)?;
+        write!(t, "  {:10}", from)?;
+        t.reset()?;
+        write!(t, "→ ")?;
+        let vote: &Map<String, Value> = vote_value.as_object().unwrap();
+
+        for policy in &setting.policies {
+            if let Some(value) = vote.get(policy) {
+                t.fg(term::color::GREEN)?;
+                write!(t, "{:10}: ", policy)?;
+                t.reset()?;
+                write!(t, "{:10}, ", value)?;
+            }
+        }
+
+        for voter in &setting.voters {
+            if let Some(value) = vote.get(voter) {
+                t.fg(term::color::BLUE)?;
+                write!(t, "{:10}: ", voter)?;
+                t.reset()?;
+                write!(t, "{:10}, ", value)?;
+            }
+        }
+
+        write!(t, "\n")?;
+    }
+
+    write!(t, "\n")?;
     Ok(())
 }
 
