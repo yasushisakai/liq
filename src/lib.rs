@@ -1,10 +1,9 @@
-
 use std::collections::HashMap;
 use ndarray::{stack, Array, Array2, Axis, s};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, Map};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Setting {
     pub title: Option<String>,
     pub voters: Vec<String>,
@@ -12,7 +11,7 @@ pub struct Setting {
     pub votes: Value,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct PollResult {
     pub votes: HashMap<String, f64>,
     pub influence: HashMap<String, f64>
@@ -62,7 +61,6 @@ pub fn create_matrix(settings: &Setting) -> Array2<f64> {
 
 pub fn calculate(m: Array2::<f64>, num_voters: usize) -> (Vec<f64>, Vec<f64>){
     let square = m.shape()[0];
-    let num_policies = square - num_voters;
     let mut a = Array::eye(square);
     let mut sum = Array::eye(square);
 

@@ -11,3 +11,4 @@ clap = "2.33.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 ndarray = "0.12.1"
+term = "*"
