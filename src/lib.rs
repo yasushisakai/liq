@@ -46,7 +46,7 @@ pub fn create_matrix(settings: &Setting) -> Array2<f64> {
             }
         }
 
-        i = i + 1;
+        i += 1;
     }
 
     let vp :Array2::<f64> = Array::zeros((policies.len(), voters.len()));
@@ -66,7 +66,7 @@ pub fn calculate(m: Array2::<f64>, num_voters: usize) -> (Vec<f64>, Vec<f64>){
 
     for _i in 0..ITERATION{
         a = a.dot(&m);
-        sum = sum + &a;
+        sum += &a;
     }
 
     let sum = sum.slice(s![..num_voters, ..num_voters]);
@@ -79,7 +79,7 @@ pub fn calculate(m: Array2::<f64>, num_voters: usize) -> (Vec<f64>, Vec<f64>){
     (vote_results, voters_influence)
 }
 
-pub fn poll_result(voters: &Vec<String>, policies: &Vec<String>, result: (Vec<f64>, Vec<f64>)) -> PollResult {
+pub fn poll_result(voters: &[String], policies: &[String], result: (Vec<f64>, Vec<f64>)) -> PollResult {
     let mut votes_r = HashMap::new();
 
     let mut influences_r = HashMap::new();

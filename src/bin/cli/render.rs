@@ -28,7 +28,7 @@ pub fn pretty_print_settings(setting: &Setting) -> Result<(), Box<dyn Error>> {
     t.reset()?;
 
     if let Some(title) = &setting.title {
-        write!(t, "{}\n", title)?;
+        writeln!(t, "{}", title)?;
     }
 
     t.attr(term::Attr::Bold)?;
@@ -41,7 +41,7 @@ pub fn pretty_print_settings(setting: &Setting) -> Result<(), Box<dyn Error>> {
     }
 
     t.reset()?;
-    write!(t, "\n")?;
+    writeln!(t)?;
 
     t.attr(term::Attr::Bold)?;
     write!(t, "{:10}","voters")?;
@@ -89,10 +89,10 @@ pub fn pretty_print_settings(setting: &Setting) -> Result<(), Box<dyn Error>> {
             }
         }
 
-        write!(t, "\n")?;
+        writeln!(t)?;
     }
 
-    write!(t, "\n")?;
+    writeln!(t)?;
     Ok(())
 }
 
@@ -132,13 +132,13 @@ pub fn pretty_print_result(result: &PollResult) -> Result<(), Box<dyn Error>> {
         t.fg(term::color::GREEN)?;
         write!(t, "  {:width$} ", p, width=&max_length)?;
         t.reset()?;
-        write!(t, "{:.4}\n", v)?;
+        writeln!(t, "{:.4}", v)?;
     }
 
-    write!(t, "\r\n")?;
+    writeln!(t)?;
 
     t.attr(term::Attr::Bold)?;
-    write!(t, "  influence:\n")?;
+    writeln!(t, "  influence:")?;
     t.reset()?;
 
     t.fg(term::color::BLUE)?;
@@ -149,7 +149,7 @@ pub fn pretty_print_result(result: &PollResult) -> Result<(), Box<dyn Error>> {
         t.fg(term::color::BLUE)?;
         write!(t, "  {:width$} ", inf, width=&max_length)?;
         t.reset()?;
-        write!(t, "{:.4}\n", v)?;
+        writeln!(t, "{:.4}", v)?;
     }
     Ok(())
 }
