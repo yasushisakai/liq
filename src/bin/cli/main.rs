@@ -7,12 +7,19 @@ pub fn main () {
 
     let global_match = App::new("liq")
         .version("0.0.0")
-        .about("liquid demons")
+        .about("a tool to support humans working collectivly to make descisions")
+        .before_help(" _ _       
+| (_) __ _ 
+| | |/ _` |
+| | | (_| |
+|_|_|\\__, |
+        |_|")
         .author("Yasushi Sakai")
         .subcommand(SubCommand::with_name("new")
             .about("starts a interactive liquid democracy session")
-            .arg(Arg::with_name(FILE))
-            .help("file name of new configuration file")
+            .arg(Arg::with_name(FILE)
+                .required(true)
+            )
         )
         .subcommand(SubCommand::with_name("run")
             .arg(Arg::with_name(FILE)

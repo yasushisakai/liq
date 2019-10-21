@@ -13,7 +13,7 @@ pub const JSON: &str = "JSON";
 pub const ALL: &str = "ALL";
 
 pub fn run(matches: &ArgMatches) {
-    let settings_file = matches.value_of(FILE).expect("please specify file");
+    let settings_file = matches.value_of(FILE).unwrap();
     let path = current_dir().unwrap();
     let settings_path = path.join(settings_file);
 
