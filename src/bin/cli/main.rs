@@ -1,7 +1,8 @@
 mod handlers;
 mod render;
+mod interactions;
 use clap::{Arg, App, SubCommand};
-use handlers::{run, ALL, FILE, JSON};
+use handlers::{new, run, ALL, FILE, JSON};
 
 pub fn main () {
 
@@ -38,8 +39,9 @@ pub fn main () {
             )
         ).get_matches();
 
-
-    if let Some(run_matches) = global_match.subcommand_matches("run") {
-        run(run_matches);
+    match global_match.subcommand() {
+        ("run", Some(m)) => run(m),
+        ("new", Some(m)) => new(m),
+        _ => {}
     }
 }

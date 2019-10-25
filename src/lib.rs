@@ -2,13 +2,62 @@ use std::collections::HashMap;
 use ndarray::{stack, Array, Array2, Axis, s};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, Map};
+use std::fmt;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
+pub enum Policy{
+    Short(String),
+    Long((String, String))
+}
+
+impl fmt::Display for Policy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let d = match self {
+            Policy::Short(d) => d,
+            Policy::Long((d, _)) => d,
+        };
+        write!(f, "{}", d)
+    }
+}
+
+pub fn match_by_string(policy: &Policy, id: &str) -> bool {
+    match policy {
+        Policy::Short(desc) => desc == id,
+        Policy::Long((title, _)) =>  title == id,
+    }
+}
+
+#[derive(Deserialize, Serialize, Default)]
 pub struct Setting {
     pub title: Option<String>,
     pub voters: Vec<String>,
-    pub policies: Vec<String>,
-    pub votes: Value,
+    pub policies: Vec<Policy>,
+    pub votes: HashMap<String, HashMap<String, f64>>,
+}
+
+impl Setting {
+    pub fn add_voter(&mut self, p: &str) {
+        self.voters.push(p.to_string());
+    }
+    pub fn delete_voter(&mut self, p: &str) -> Option<usize> {
+        if let Some(index) = self.voters.iter().position(|v| v == p) {
+                self.voters.remove(index);
+                return Some(index);
+        }
+        None
+    }
+
+    pub fn add_policy(&mut self, p: Policy) {
+        self.policies.push(p);
+    }
+
+    pub fn delete_policy(&mut self, p: &str) -> Option<usize> {
+        if let Some(index) = self.policies.iter().position(|v| match_by_string(v, p)) {
+                self.policies.remove(index);
+                return Some(index);
+        }
+        None
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -30,19 +79,19 @@ pub fn create_matrix(settings: &Setting) -> Array2<f64> {
 
     let mut i = 0;
     for v in voters {
-        let vote: &Map<String, Value>= settings.votes.get(&v).unwrap().as_object().unwrap();
+        let vote: &HashMap<String, f64>= settings.votes.get(v).unwrap();
         // TODO: check if there is no one missed out
         for (key, val) in vote.iter() {
             let id = match voters.iter().position(|k| k == key) {
                 Some(n) => Some(n),
-                None => match &policies.iter().position(|k| k == key) {
+                None => match &policies.iter().position(|k| match_by_string(k, key)) {
                     Some(n) => Some(n + voters.len()),
                     None => None,
                 }
             };
 
             if let Some(index) = id {
-                m[[index, i]] = val.as_f64().unwrap();
+                m[[index, i]] = val.to_owned();
             }
         }
 
@@ -79,7 +128,8 @@ pub fn calculate(m: Array2::<f64>, num_voters: usize) -> (Vec<f64>, Vec<f64>){
     (vote_results, voters_influence)
 }
 
-pub fn poll_result(voters: &[String], policies: &[String], result: (Vec<f64>, Vec<f64>)) -> PollResult {
+pub fn poll_result(voters: &[String], policies: &[Policy], result: (Vec<f64>, Vec<f64>)) -> PollResult {
+
     let mut votes_r = HashMap::new();
 
     let mut influences_r = HashMap::new();
@@ -87,7 +137,8 @@ pub fn poll_result(voters: &[String], policies: &[String], result: (Vec<f64>, Ve
     let (votes, influence) = result;
 
     for (i, p) in policies.iter().enumerate() {
-        votes_r.insert(p.to_owned(), votes.get(i).unwrap().to_owned());
+        let d = format!("{}", p);
+        votes_r.insert(d.to_owned(), votes.get(i).unwrap().to_owned());
     }
 
     for (i, inf) in voters.iter().enumerate() {

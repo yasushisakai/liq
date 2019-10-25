@@ -1,7 +1,7 @@
 {
     "title": "bread or rice?",
     "voters": ["Yasushi", "Minori", "Ray"],
-    "policies": ["Rice", "Bread"],
+    "policies": [{"Short":"Rice"}, {"Short":"Bread"}],
     "votes": {
         "Yasushi": {
             "Minori": 0.2,

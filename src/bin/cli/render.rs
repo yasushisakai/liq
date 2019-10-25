@@ -1,8 +1,8 @@
 use std::error::Error;
 use std::iter::FromIterator;
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use liquid_demons::{Setting, PollResult};
-use serde_json::{Map, Value};
 use std::io::prelude::*;
 use term;
 
@@ -16,8 +16,9 @@ pub fn pretty_print_settings(setting: &Setting) -> Result<(), Box<dyn Error>> {
     }
 
     for p in &setting.policies {
-        if max_length < p.len() {
-            max_length = p.len();
+        let title = format!("{}", p);
+        if max_length < title.len() {
+            max_length = title.len();
         }
     }
 
@@ -55,7 +56,7 @@ pub fn pretty_print_settings(setting: &Setting) -> Result<(), Box<dyn Error>> {
 
     write!(t, "\n\n")?;
 
-    let votes: &Map<String, Value> = setting.votes.as_object().unwrap();
+    let votes: &HashMap<String, HashMap<String, f64>> = &setting.votes;
 
     t.attr(term::Attr::Bold)?;
     write!(t, "{:10}","votes")?;
@@ -69,19 +70,20 @@ pub fn pretty_print_settings(setting: &Setting) -> Result<(), Box<dyn Error>> {
         write!(t, "  {:width$}", from, width=&max_length)?;
         t.reset()?;
         write!(t, " → ")?;
-        let vote: &Map<String, Value> = vote_value.as_object().unwrap();
+        // let vote: &HashMap<String, f64> = vote_value;
 
         for policy in &setting.policies {
-            if let Some(value) = vote.get(policy) {
+            let title = format!("{}", policy);
+            if let Some(value) = vote_value.get(&title) {
                 t.fg(term::color::GREEN)?;
-                write!(t, "{:width$}: ", policy, width=&max_length)?;
+                write!(t, "{:width$}: ", title, width=&max_length)?;
                 t.reset()?;
                 write!(t, "{:width$}, ", value, width=&max_length)?;
             }
         }
 
         for voter in &setting.voters {
-            if let Some(value) = vote.get(voter) {
+            if let Some(value) = vote_value.get(voter) {
                 t.fg(term::color::BLUE)?;
                 write!(t, "{:width$}: ", voter, width=&max_length)?;
                 t.reset()?;

@@ -1,0 +1,24 @@
+{
+  "title": "hello",
+  "voters": [
+    "Yasushi",
+    "Minori",
+    "Ray"
+  ],
+  "policies": [
+    {
+      "Short": "Rice"
+    },
+    {
+      "Short": "Bread"
+    }
+  ],
+  "votes": {
+    "Minori": {
+      "Yasushi": 0.1,
+      "Ray": 0.3,
+      "Bread": 0.2,
+      "Rice": 0.3
+    }
+  }
+}
