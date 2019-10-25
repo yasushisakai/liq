@@ -12,7 +12,7 @@ use std::time;
 // use std::io::prelude::*;
 use crate::interactions::{ask_for_a_float, ask_for_a_string, chooser};
 use crate::render::{pretty_print_result, pretty_print_settings};
-use liquid_demons::{calculate, create_matrix, poll_result, Policy, Setting};
+use liq::{calculate, create_matrix, poll_result, Policy, Setting};
 use serde_json::{json, Map, Value};
 use termion;
 use termion::raw::IntoRawMode;

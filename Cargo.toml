@@ -1,5 +1,5 @@
 [package]
-name = "liquid_demons"
+name = "liq"
 version = "0.1.0"
 authors = ["yasushisakai <ysshski@gmail.com>"]
 edition = "2018"

@@ -2,7 +2,7 @@ use std::error::Error;
 use std::iter::FromIterator;
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use liquid_demons::{Setting, PollResult};
+use liq::{Setting, PollResult};
 use std::io::prelude::*;
 use term;
 

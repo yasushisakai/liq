@@ -7,7 +7,7 @@ use handlers::{new, run, ALL, FILE, JSON};
 pub fn main () {
 
     let global_match = App::new("liq")
-        .version("0.0.0")
+        .version("0.1.0")
         .about("a tool to support humans working collectivly to make descisions")
         .before_help(" _ _       
 | (_) __ _ 
