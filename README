@@ -10,7 +10,7 @@ Yasushi Sakai
 a tool to support humans working collectivly to make descisions
 
 USAGE:
-    cli [SUBCOMMAND]
+    liq [SUBCOMMAND]
 
 FLAGS:
     -h, --help       Prints help information
