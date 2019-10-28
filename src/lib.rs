@@ -1,12 +1,12 @@
-use std::collections::HashMap;
-use ndarray::{stack, Array, Array2, Axis, s};
+use ndarray::{s, stack, Array, Array2, Axis};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fmt;
 
 #[derive(Debug, Deserialize, Serialize)]
-pub enum Policy{
+pub enum Policy {
     Short(String),
-    Long((String, String))
+    Long((String, String)),
 }
 
 impl fmt::Display for Policy {
@@ -22,7 +22,7 @@ impl fmt::Display for Policy {
 pub fn match_by_string(policy: &Policy, id: &str) -> bool {
     match policy {
         Policy::Short(desc) => desc == id,
-        Policy::Long((title, _)) =>  title == id,
+        Policy::Long((title, _)) => title == id,
     }
 }
 
@@ -36,14 +36,13 @@ pub struct Setting {
     pub votes: HashMap<String, HashMap<String, f64>>,
 }
 
-
 impl Setting {
-    pub fn new() -> Self{
-        Setting{
+    pub fn new() -> Self {
+        Setting {
             title: None,
             voters: Vec::new(),
             policies: Vec::new(),
-            votes: HashMap::new()
+            votes: HashMap::new(),
         }
     }
 
@@ -57,8 +56,8 @@ impl Setting {
                 self.voters.remove(index);
                 let _ = self.votes.remove(p);
                 Some(index)
-            },
-            None => None
+            }
+            None => None,
         }
     }
 
@@ -68,118 +67,128 @@ impl Setting {
 
     pub fn delete_policy(&mut self, p: &str) -> Option<usize> {
         match self.policies.iter().position(|v| match_by_string(v, p)) {
-            Some(index) =>{
+            Some(index) => {
                 self.policies.remove(index);
                 Some(index)
-            },
+            }
             None => None,
         }
     }
 
-
     pub fn purge_and_normalize(&mut self) {
+        let new_votes: HashMap<String, HashMap<String, f64>> = self
+            .votes
+            .iter()
+            .filter_map(|(voter, votes)| {
+                if votes.is_empty() {
+                    return None;
+                };
 
-        let new_votes: HashMap<String, HashMap<String, f64>> = self.votes.iter().filter_map(|(voter, votes)| {
-            if votes.is_empty() { return None };
+                let sum = votes.iter().by_ref().fold(0.0, |s, (_, v)| s + v);
 
-            let sum = votes.iter().by_ref().fold(0.0, |s, (_, v)| s+v);
-            println!("sum of {} is {}", voter, sum);
+                if sum == 0.0f64 {
+                    return None;
+                };
 
-            if sum == 0.0f64 { 
-                return None
-            };
+                let nv: HashMap<String, f64> = votes
+                    .iter()
+                    .filter_map(move |(to, vote)| {
+                        if *vote == 0.0 {
+                            None
+                        } else {
+                            Some((to.to_string(), *vote / sum))
+                        }
+                    })
+                    .collect();
 
-            println!("{:?}", votes);
-
-            let nv : HashMap<String, f64> = votes.iter().filter_map(move |(to, vote)|{
-                println!("The value of {}'s vote to {} is {}", voter, to , vote);
-                if *vote == 0.0 {
-                    None
-                } else {
-                    Some((to.to_string(), *vote / sum))
-                }
-            }).collect();
-
-            println!("{:?}", nv);
-
-            Some((voter.to_string(), nv))
-        }).collect();
-
+                Some((voter.to_string(), nv))
+            })
+            .collect();
         self.votes = new_votes;
     }
-
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct PollResult {
     pub votes: HashMap<String, f64>,
-    pub influence: HashMap<String, f64>
+    pub influence: HashMap<String, f64>,
 }
 
 const ITERATION: u32 = 1000;
 
 pub fn create_matrix(settings: &Setting) -> Array2<f64> {
+    // There will be one more policy added for calculation.
+    // This is the default policy where voters vote placed by default
+
     let voters = &settings.voters;
     // TODO: check for duplicates
     let policies = &settings.policies;
 
-    let elements_num = voters.len() + policies.len();
+    let p_num = policies.len() + 1;
+
+    let elements_num = voters.len() + p_num;
 
     let mut m = Array::zeros((elements_num, voters.len()));
 
-    let mut i = 0;
-    for v in voters {
-        let vote: &HashMap<String, f64>= settings.votes.get(v).unwrap();
-        // TODO: check if there is no one missed out
-        for (key, val) in vote.iter() {
-            let id = match voters.iter().position(|k| k == key) {
-                Some(n) => Some(n),
-                None => match &policies.iter().position(|k| match_by_string(k, key)) {
-                    Some(n) => Some(n + voters.len()),
-                    None => None,
-                }
-            };
+    for (i, v) in voters.iter().enumerate() {
+        match settings.votes.get(v) {
+            Some(vote) => {
+                for (key, val) in vote.iter() {
+                    let id = match voters.iter().position(|k| k == key) {
+                        Some(n) => Some(n),
+                        None => match &policies.iter().position(|k| match_by_string(k, key)) {
+                            Some(n) => Some(n + voters.len()),
+                            None => None,
+                        },
+                    };
 
-            if let Some(index) = id {
-                m[[index, i]] = val.to_owned();
+                    if let Some(index) = id {
+                        m[[index, i]] = val.to_owned();
+                    }
+                }
+
+            }
+            None => {
+                m[[elements_num - 1, i]] = 1.0;
             }
         }
-
-        i += 1;
     }
 
-    let vp :Array2::<f64> = Array::zeros((policies.len(), voters.len()));
-    let pp :Array2::<f64> = Array::eye(policies.len());
+    let vp: Array2<f64> = Array::zeros((policies.len() + 1, voters.len()));
+    let pp: Array2<f64> = Array::eye(policies.len() + 1);
 
     let leftpart = stack![Axis(1), vp, pp];
-   
     let initial_matrix = stack![Axis(1), m, leftpart.t()];
 
     initial_matrix
 }
 
-pub fn calculate(m: Array2::<f64>, num_voters: usize) -> (Vec<f64>, Vec<f64>){
+pub fn calculate(m: Array2<f64>, num_voters: usize) -> (Vec<f64>, Vec<f64>) {
     let square = m.shape()[0];
     let mut a = Array::eye(square);
     let mut sum = Array::eye(square);
 
-    for _i in 0..ITERATION{
+    for _i in 0..ITERATION {
         a = a.dot(&m);
         sum += &a;
     }
 
-    let sum = sum.slice(s![..num_voters, ..num_voters]);
-    let sum_row = sum.sum_axis(Axis(1));
-    let a = a.slice(s![.., 0..3]);
+    let a = a.slice(s![.., 0..num_voters]); 
     let vote_results = a.sum_axis(Axis(1));
     let vote_results = vote_results.slice(s![num_voters..]).to_vec();
+
+    let sum = sum.slice(s![..num_voters, ..num_voters]);
+    let sum_row = sum.sum_axis(Axis(1));
     let voters_influence = (sum_row / sum.diag()).to_vec();
 
     (vote_results, voters_influence)
 }
 
-pub fn poll_result(voters: &[String], policies: &[Policy], result: (Vec<f64>, Vec<f64>)) -> PollResult {
-
+pub fn poll_result(
+    voters: &[String],
+    policies: &[Policy],
+    result: (Vec<f64>, Vec<f64>),
+) -> PollResult {
     let mut votes_r = HashMap::new();
 
     let mut influences_r = HashMap::new();
@@ -190,6 +199,8 @@ pub fn poll_result(voters: &[String], policies: &[Policy], result: (Vec<f64>, Ve
         let d = format!("{}", p);
         votes_r.insert(d.to_owned(), votes.get(i).unwrap().to_owned());
     }
+
+    votes_r.insert("(Blank)".to_owned(), votes.last().unwrap().to_owned());
 
     for (i, inf) in voters.iter().enumerate() {
         influences_r.insert(inf.to_owned(), influence.get(i).unwrap().to_owned());
