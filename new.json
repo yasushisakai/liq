@@ -1,24 +1,28 @@
 {
-  "title": "hello",
+  "title": "",
   "voters": [
+    "Ray",
     "Yasushi",
-    "Minori",
-    "Ray"
+    "Minori"
   ],
   "policies": [
     {
-      "Short": "Rice"
+      "Short": "Bread"
     },
     {
-      "Short": "Bread"
+      "Short": "Rice"
     }
   ],
   "votes": {
-    "Minori": {
-      "Yasushi": 0.1,
-      "Ray": 0.3,
-      "Bread": 0.2,
-      "Rice": 0.3
+    "Yasushi": {
+      "Bread": 0.08333333333333334,
+      "Rice": 0.25,
+      "Minori": 0.6666666666666667
+    },
+    "Ray": {
+      "Yasushi": 0.21428571428571427,
+      "Rice": 0.6428571428571429,
+      "Minori": 0.14285714285714285
     }
   }
 }

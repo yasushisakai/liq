@@ -9,21 +9,19 @@ use std::time;
 pub fn chooser(options: &HashMap<char, &str>) -> Result<char, Box<dyn Error>> {
     // Set terminal to raw mode to allow reading stdin one key at a time
     let mut stdout = stdout().into_raw_mode()?;
-    // Use asynchronous stdin
-    // let mut stdin = termion::async_stdin().keys();
     let stdin = stdin();
     let stdin = stdin.lock();
 
     writeln!(
         stdout,
         "{}Select Option{}:\r",
-        termion::style::Bold,
-        termion::style::Reset
+        style::Bold,
+        style::Reset
     )?;
     for (c, mes) in options {
         writeln!(stdout, "  ({}) {}\r", c, mes)?;
     }
-    writeln!(stdout, "  (q) Quit\r")?;
+    writeln!(stdout, "  (b) Back\r")?;
 
     let mut option: char = '\0'; // null char here
 
@@ -39,10 +37,10 @@ pub fn chooser(options: &HashMap<char, &str>) -> Result<char, Box<dyn Error>> {
                         break;
                     }
                 }
-                b'q' => {
-                    write!(stdout, "{}\ryour choice: (q): Quit?", clear::CurrentLine)?;
+                b'b' => {
+                    write!(stdout, "{}\ryour choice: (b): go Back", clear::CurrentLine)?;
                     stdout.lock().flush()?;
-                    option = 'q';
+                    option = 'b';
                 }
                 b => {
                     let c = b as char;
@@ -67,6 +65,15 @@ pub fn chooser(options: &HashMap<char, &str>) -> Result<char, Box<dyn Error>> {
         write!(stdout, "{0}{1}\r", cursor::Up(1), clear::CurrentLine)?;
         stdout.lock().flush()?;
     }
+
+        if let Some(o) = options.get(&option) {
+            println!("{}Selected{}: {}\r",
+            style::Bold,
+            style::Reset,
+            o 
+            );
+        }
+
     Ok(option)
 }
 
@@ -78,10 +85,12 @@ pub fn ask_for_a_string(mes: &str) -> Result<String, Box<dyn Error>> {
     Ok(out.trim().to_string())
 }
 
-pub fn ask_for_a_float(mes: &str) -> Result<f64, Box<dyn Error>> {
-    let string_result = ask_for_a_string(mes)?;
-
+pub fn ask_for_a_float(mes: &str, default_value: f64) -> Result<f64, Box<dyn Error>> {
+    let message = format!("{}({}): ", mes, default_value);
+    let string_result = ask_for_a_string(&message)?;
+    if string_result == "" {
+        return Ok(default_value);
+    }
     let r: f64 = string_result.parse()?;
-
     Ok(r)
 }

@@ -26,6 +26,8 @@ pub fn match_by_string(policy: &Policy, id: &str) -> bool {
     }
 }
 
+// the design princicple of this struct is that it is human understandable,
+// and easy to edit. Editing a raw matrix will not be as straight forward
 #[derive(Deserialize, Serialize, Default)]
 pub struct Setting {
     pub title: Option<String>,
@@ -34,16 +36,30 @@ pub struct Setting {
     pub votes: HashMap<String, HashMap<String, f64>>,
 }
 
+
 impl Setting {
+    pub fn new() -> Self{
+        Setting{
+            title: None,
+            voters: Vec::new(),
+            policies: Vec::new(),
+            votes: HashMap::new()
+        }
+    }
+
     pub fn add_voter(&mut self, p: &str) {
         self.voters.push(p.to_string());
     }
+
     pub fn delete_voter(&mut self, p: &str) -> Option<usize> {
-        if let Some(index) = self.voters.iter().position(|v| v == p) {
+        match self.voters.iter().position(|v| v == p) {
+            Some(index) => {
                 self.voters.remove(index);
-                return Some(index);
+                let _ = self.votes.remove(p);
+                Some(index)
+            },
+            None => None
         }
-        None
     }
 
     pub fn add_policy(&mut self, p: Policy) {
@@ -51,12 +67,47 @@ impl Setting {
     }
 
     pub fn delete_policy(&mut self, p: &str) -> Option<usize> {
-        if let Some(index) = self.policies.iter().position(|v| match_by_string(v, p)) {
+        match self.policies.iter().position(|v| match_by_string(v, p)) {
+            Some(index) =>{
                 self.policies.remove(index);
-                return Some(index);
+                Some(index)
+            },
+            None => None,
         }
-        None
     }
+
+
+    pub fn purge_and_normalize(&mut self) {
+
+        let new_votes: HashMap<String, HashMap<String, f64>> = self.votes.iter().filter_map(|(voter, votes)| {
+            if votes.is_empty() { return None };
+
+            let sum = votes.iter().by_ref().fold(0.0, |s, (_, v)| s+v);
+            println!("sum of {} is {}", voter, sum);
+
+            if sum == 0.0f64 { 
+                return None
+            };
+
+            println!("{:?}", votes);
+
+            let nv : HashMap<String, f64> = votes.iter().filter_map(move |(to, vote)|{
+                println!("The value of {}'s vote to {} is {}", voter, to , vote);
+                if *vote == 0.0 {
+                    None
+                } else {
+                    Some((to.to_string(), *vote / sum))
+                }
+            }).collect();
+
+            println!("{:?}", nv);
+
+            Some((voter.to_string(), nv))
+        }).collect();
+
+        self.votes = new_votes;
+    }
+
 }
 
 #[derive(Deserialize, Serialize, Debug)]

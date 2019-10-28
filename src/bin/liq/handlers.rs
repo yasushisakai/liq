@@ -14,7 +14,6 @@ use crate::interactions::{ask_for_a_float, ask_for_a_string, chooser};
 use crate::render::{pretty_print_result, pretty_print_settings};
 use liq::{calculate, create_matrix, poll_result, Policy, Setting};
 use serde_json::{json, Map, Value};
-use termion;
 use termion::raw::IntoRawMode;
 use termion::{clear, color, cursor, style};
 
@@ -54,7 +53,10 @@ pub fn run(matches: &ArgMatches) {
 pub fn new(matches: &ArgMatches) {
     let mut settings = Setting::default();
 
-    print!("Title (optional): ");
+    print!("{}Title (optional){}: ",
+    style::Bold,
+    style::Reset, 
+    );
     stdout().flush().unwrap();
 
     let mut title = String::new();
@@ -67,6 +69,7 @@ pub fn new(matches: &ArgMatches) {
     let path = current_dir().unwrap();
     let file_name = matches.value_of(FILE).unwrap();
     let file_path = path.join(Path::new(file_name));
+    settings.purge_and_normalize();
     write_settings_file(&file_path, &settings).expect("couldn't write the file");
 }
 
@@ -84,8 +87,8 @@ fn menu(settings: &mut Setting) -> Result<(), Box<dyn Error>> {
 
         writeln!(stdout,
         "{}Select Option{}:\n\r  (1) Edit voters\n\r  (2) Edit Policies\n\r  (3) Edit Votes\n\r  (q) Save and Quit\r",
-        color::Fg(color::Blue),
-        termion::style::Reset,
+        termion::style::Bold,
+        termion::style::Reset
         )?;
 
         let mut bytes = stdin.bytes();
@@ -234,7 +237,7 @@ fn edit_policies(settings: &mut Setting) -> Result<(), Box<dyn Error>> {
             }
             true
         }
-        'q' => false,
+        'b' => false,
         _ => false,
     };
 
@@ -250,10 +253,9 @@ fn edit_policies(settings: &mut Setting) -> Result<(), Box<dyn Error>> {
 fn edit_voters(settings: &mut Setting) -> Result<(), Box<dyn Error>> {
     let options: HashMap<char, &str> = [
         ('l', "list view voters"),
-        ('a', "Add voters"),
-        ('d', "Delete voters"),
-        ('e', "Edit votes"),
-        ('r', "Rename voters"),
+        ('a', "Add voter"),
+        ('d', "Delete voter"),
+        ('r', "Rename voter"),
     ]
     .iter()
     .cloned()
@@ -265,7 +267,7 @@ fn edit_voters(settings: &mut Setting) -> Result<(), Box<dyn Error>> {
         'a' => {
             // ask of name
             loop {
-                if let Ok(name) = ask_for_a_string("new user name:") {
+                if let Ok(name) = ask_for_a_string(&format!("{}New user name{}:", style::Bold, style::Reset)) {
                     settings.add_voter(&name);
                     break;
                 };
@@ -310,8 +312,7 @@ fn edit_voters(settings: &mut Setting) -> Result<(), Box<dyn Error>> {
             }
             true
         }
-        'e' => true,
-        'q' => false,
+        'b' => false,
         _ => false,
     };
 
@@ -326,87 +327,74 @@ fn edit_voters(settings: &mut Setting) -> Result<(), Box<dyn Error>> {
 
 fn edit_votes(settings: &mut Setting) -> Result<(), Box<dyn Error>>{
     if let Ok(name) = ask_for_a_string("edit user name:") {
-        println!("You can put any number to show your support for both fellow voters and policies. Note that ");
-        println!(
-            "your votes will be normalized to be a total of {}one{} vote.",
-            style::Bold,
-            style::Reset
-        );
+        match settings.voters.iter().position(|v| v==&name) {
+            None => {
+                println!("Could not find user name: {}", &name);
+            },
+            Some(_) => {
+                println!("You can put any number to show your support for both fellow voters and policies. Note that ");
+                println!(
+                    "your votes will be normalized to be a total of {}one{} vote.",
+                    style::Bold,
+                    style::Reset
+                );
 
-        // let votes = match settings.votes {
-        //     Some(vts) => match vts.get(&name) {
-        //         Some(my_votes) => my_votes.as_object().unwrap().to_owned(),
-        //         None => HashMap::new(),
-        //     },
-        //     None => HashMap::new(),
-        // };
-
-        let votes = match settings.votes.get(&name) {
-            Some(vts) => vts.to_owned(),
-            None => HashMap::new()
-        };
+                let votes = match settings.votes.get(&name) {
+                    Some(vts) => vts.to_owned(),
+                    None => HashMap::new()
+                };
         
-        println!("{}", &name);
+                println!("{}", &name);
 
-        let mut new_vote: HashMap<String, f64> = HashMap::new();
+                let mut new_vote: HashMap<String, f64> = HashMap::new();
 
-        println!(
-            "{}{}Policies{}:",
-            style::Bold,
-            color::Fg(color::Green),
-            style::Reset
-        );
-        for policy in &settings.policies {
-            loop {
-                let mut current_value = 0.0;
-                let id = format!("{}", policy);
-                if let Some(v) = votes.get(&id) {
-                    current_value = v.to_owned();
+                println!(
+                    "{}{}Policies{}:",
+                    style::Bold,
+                    color::Fg(color::Green),
+                    style::Reset
+                );
+                for policy in &settings.policies {
+                    loop {
+                        let mut current_value = 0.0;
+                        let id = format!("{}", policy);
+                        if let Some(v) = votes.get(&id) {
+                            current_value = v.to_owned();
+                        }
+                        let policy_id = format!("{}", &policy);
+                        if let Ok(v) = ask_for_a_float(&policy_id, current_value) {
+                            new_vote.insert(policy_id, v);
+                            break;
+                        } 
+                    }
                 }
-                let policy_id = format!("{}", &policy);
-                let mes = format!("  {}({}):", &policy_id, current_value);
-                if let Ok(v) = ask_for_a_float(&mes) {
-                    new_vote.insert(policy_id, v);
-                    break;
+
+                println!(
+                    "{}{}Voters{}:",
+                    style::Bold,
+                    color::Fg(color::Blue),
+                    style::Reset
+                );
+                for voter in &settings.voters {
+                    if &name == voter {
+                        continue;
+                    }
+                    loop {
+                        let mut current_value = 0.0;
+                        if let Some(v) = votes.get(voter) {
+                            current_value = v.to_owned();
+                        }
+                        if let Ok(v) = ask_for_a_float(&voter, current_value) {
+                            new_vote.insert(voter.to_owned(), v);
+                            break;
+                        }
+                    }
                 }
+                settings.votes.insert(name, new_vote);
             }
         }
-
-        println!(
-            "{}{}Voters{}:",
-            style::Bold,
-            color::Fg(color::Blue),
-            style::Reset
-        );
-        for voter in &settings.voters {
-            if &name == voter {
-                continue;
-            }
-            loop {
-                let mut current_value = 0.0;
-                if let Some(v) = votes.get(voter) {
-                    current_value = v.to_owned();
-                }
-                if let Ok(v) = ask_for_a_float(&format!("  {}({}): ", &voter, current_value)) {
-                    new_vote.insert(voter.to_owned(), v);
-                    break;
-                }
-            }
-        }
-
-        // match settings.votes{
-        //     Some(votes) => {
-        //         votes.insert(name, new_vote);
-        //         },
-        //     None => {
-        //         let mut new_votes = HashMap::new();
-        //         new_votes.insert(name, new_vote);
-        //         settings.votes = new_votes;
-        //     }
-        // }
-        settings.votes.insert(name, new_vote);
     }
-
+    // clean votes
     menu(settings)?;
     Ok(())
 }
