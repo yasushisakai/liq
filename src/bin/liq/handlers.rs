@@ -50,6 +50,10 @@ pub fn run(matches: &ArgMatches) {
     }
 }
 
+pub fn edit(matches: &ArgMatches) {
+    println!("edit");
+}
+
 pub fn new(matches: &ArgMatches) {
     let mut settings = Setting::default();
 
