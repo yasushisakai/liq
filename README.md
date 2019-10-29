@@ -1,10 +1,5 @@
+![](https://www.dropbox.com/s/o3cdzdbo760te71/logo.png?raw=1)
 ```
- _ _       
-| (_) __ _ 
-| | |/ _` |
-| | | (_| |
-|_|_|\__, |
-        |_|
 
 liq 0.1.0
 Yasushi Sakai
