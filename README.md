@@ -1,10 +1,5 @@
+![](https://www.dropbox.com/s/o3cdzdbo760te71/logo.png?raw=1)
 ```
- _ _       
-| (_) __ _ 
-| | |/ _` |
-| | | (_| |
-|_|_|\__, |
-        |_|
 
 liq 0.1.0
 Yasushi Sakai
@@ -24,7 +19,7 @@ SUBCOMMANDS:
     help    Prints this message or the help of the given subcommand(s)
 ```
 
-[![asciicast](https://asciinema.org/a/277585.svg)](https://asciinema.org/a/277585)
+[![asciicast](https://asciinema.org/a/277585.svg)](https://asciinema.org/a/277585?t=4&speed=2)
 
 # How to Build
 
