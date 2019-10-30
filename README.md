@@ -25,3 +25,21 @@ SUBCOMMANDS:
 ```
 
 [![asciicast](https://asciinema.org/a/277585.svg)](https://asciinema.org/a/277585)
+
+# How to Build
+
+1. install [rust](https://www.rust-lang.org/tools/install)
+2. clone this repo
+   ```
+   git clone https://github.com/yasushisakai/liq
+   ```
+3. build
+   ```
+   cd liq
+   cargo build --bin liq 
+   ```
+    this will make a binary called liq inside `target/release`
+4. help humans make collective decisions !
+   ```
+   ./liq help
+   ```
