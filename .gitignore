@@ -1,3 +1,7 @@
 /target
 **/*.rs.bk
 Cargo.lock
+
+*.json
+!test.json
+!result.json
