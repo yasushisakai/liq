@@ -162,7 +162,7 @@ pub fn create_matrix(settings: &Setting) -> Array2<f64> {
     // normalize
     for f in 0..voters.len() {
         for t in 0..elements_num {
-            m[[t, f]] = m[[t, f]] / sum_row[[f]];
+            m[[t, f]] /= sum_row[[f]];
         }
     }
 

@@ -31,9 +31,9 @@ pub fn run(matches: &ArgMatches) {
     let m = create_matrix(&settings);
 
 
-    let calulation_result = calculate(m, settings.voters.len());
+    let calculation_result = calculate(m, settings.voters.len());
 
-    let result = poll_result(&settings.voters, &settings.policies, calulation_result);
+    let result = poll_result(&settings.voters, &settings.policies, calculation_result);
 
     // printing the result
     if matches.is_present(JSON) {
@@ -53,7 +53,7 @@ pub fn run(matches: &ArgMatches) {
     }
 }
 
-pub fn edit(matches: &ArgMatches) {
+pub fn edit(_matches: &ArgMatches) {
     println!("edit");
 }
 
