@@ -29,7 +29,10 @@ pub fn run(matches: &ArgMatches) {
     let settings = read_settings_from_file(&settings_path).expect("could not read file");
     // let voters = create_matrix_from_settings(settings);
     let m = create_matrix(&settings);
+
+
     let calulation_result = calculate(m, settings.voters.len());
+
     let result = poll_result(&settings.voters, &settings.policies, calulation_result);
 
     // printing the result

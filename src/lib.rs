@@ -138,7 +138,10 @@ pub fn create_matrix(settings: &Setting) -> Array2<f64> {
                         Some(n) => Some(n),
                         None => match &policies.iter().position(|k| match_by_string(k, key)) {
                             Some(n) => Some(n + voters.len()),
-                            None => None,
+                            None => {
+                                println!("W: {} was not found in voters nor policies!", &key);
+                                None
+                            },
                         },
                     };
 
@@ -154,6 +157,15 @@ pub fn create_matrix(settings: &Setting) -> Array2<f64> {
         }
     }
 
+    let sum_row = m.sum_axis(Axis(0));
+
+    // normalize
+    for f in 0..voters.len() {
+        for t in 0..elements_num {
+            m[[t, f]] = m[[t, f]] / sum_row[[f]];
+        }
+    }
+
     let vp: Array2<f64> = Array::zeros((policies.len() + 1, voters.len()));
     let pp: Array2<f64> = Array::eye(policies.len() + 1);
 
@@ -164,6 +176,7 @@ pub fn create_matrix(settings: &Setting) -> Array2<f64> {
 }
 
 pub fn calculate(m: Array2<f64>, num_voters: usize) -> (Vec<f64>, Vec<f64>) {
+
     let square = m.shape()[0];
     let mut a = Array::eye(square);
     let mut sum = Array::eye(square);
