@@ -1,4 +1,4 @@
-![](https://www.dropbox.com/s/o3cdzdbo760te71/logo.png?raw=1)
+![](https://www.dropbox.com/s/unc9w39le774w5j/diagram_base_art.png?raw=1)
 ```
 
 liq 0.1.0
