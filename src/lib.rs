@@ -47,7 +47,9 @@ impl Setting {
     }
 
     pub fn add_voter(&mut self, p: &str) {
-        self.voters.push(p.to_string());
+        if !self.voters.iter().any(|u|u==p){
+            self.voters.push(p.to_string());
+        }
     }
 
     pub fn delete_voter(&mut self, p: &str) -> Option<usize> {
@@ -61,8 +63,10 @@ impl Setting {
         }
     }
 
-    pub fn add_policy(&mut self, p: Policy) {
-        self.policies.push(p);
+    pub fn add_policy(&mut self, policy: Policy) {
+        if !self.policies.iter().any(|p|p.to_string()==policy.to_string()){
+            self.policies.push(policy);
+        }
     }
 
     pub fn delete_policy(&mut self, p: &str) -> Option<usize> {
