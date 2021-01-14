@@ -28,7 +28,7 @@ pub fn match_by_string(policy: &Policy, id: &str) -> bool {
 
 // the design princicple of this struct is that it is human understandable,
 // and easy to edit. Editing a raw matrix will not be as straight forward
-#[derive(Deserialize, Serialize, Default)]
+#[derive(Deserialize, Serialize, Default, Debug)]
 pub struct Setting {
     pub title: Option<String>,
     pub voters: Vec<String>,
@@ -114,8 +114,8 @@ impl Setting {
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct PollResult {
-    pub votes: HashMap<String, f64>,
-    pub influence: HashMap<String, f64>,
+    pub votes: HashMap<String, Option<f64>>,
+    pub influence: HashMap<String, Option<f64>>,
 }
 
 const ITERATION: u32 = 1000;
@@ -214,13 +214,13 @@ pub fn poll_result(
 
     for (i, p) in policies.iter().enumerate() {
         let d = format!("{}", p);
-        votes_r.insert(d.to_owned(), votes.get(i).unwrap().to_owned());
+        votes_r.insert(d.to_owned(), Some(votes.get(i).unwrap().to_owned()));
     }
 
-    votes_r.insert("(Blank)".to_owned(), votes.last().unwrap().to_owned());
+    votes_r.insert("(Blank)".to_owned(), Some(votes.last().unwrap().to_owned()));
 
     for (i, inf) in voters.iter().enumerate() {
-        influences_r.insert(inf.to_owned(), influence.get(i).unwrap().to_owned());
+        influences_r.insert(inf.to_owned(), Some(influence.get(i).unwrap().to_owned()));
     }
 
     PollResult {
