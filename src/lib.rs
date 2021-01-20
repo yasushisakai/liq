@@ -1,58 +1,51 @@
 use ndarray::{s, stack, Array, Array2, Axis};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fmt;
 use sha2::{Sha256, Digest};
 use bs58::encode;
 
 #[derive(Debug, Deserialize, Serialize)]
-pub enum Policy {
-    Short(String),
-    Long((String, String)),
+pub struct Plan{
+    title: String,
+    description: Option<String>
 }
 
-impl fmt::Display for Policy {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let d = match self {
-            Policy::Short(d) => d,
-            Policy::Long((d, _)) => d,
-        };
-        write!(f, "{}", d)
+impl Plan {
+    fn new(title: String) -> Self {
+        Plan{
+            title,
+            description: None
+        }
     }
 }
 
-pub fn match_by_string(policy: &Policy, id: &str) -> bool {
-    match policy {
-        Policy::Short(desc) => desc == id,
-        Policy::Long((title, _)) => title == id,
+impl PartialEq for Plan {
+    fn eq(&self, other: &Self) -> bool {
+        self.title == other.title
     }
 }
+
+impl Eq for Plan{}
 
 // the design princicple of this struct is that it is human understandable,
 // and easy to edit. Editing a raw matrix will not be as straight forward
 #[derive(Deserialize, Serialize, Default, Debug)]
 pub struct Setting {
-    pub id: String,
-    pub title: Option<String>,
     pub voters: Vec<String>,
-    pub policies: Vec<Policy>,
-    pub prev_id: String,
+    pub plans: Vec<Plan>,
     pub votes: HashMap<String, HashMap<String, f64>>,
 }
 
 impl Setting {
     pub fn new() -> Self {
         Setting {
-            id: String::new(),
-            prev_id: String::new(),
-            title: None,
             voters: Vec::new(),
-            policies: Vec::new(),
+            plans: Vec::new(),
             votes: HashMap::new(),
         }
     }
 
-    pub fn compute_id(&self) -> String {
+    pub fn hash_base58(&self) -> String {
         let votes = serde_json::to_vec(&self.votes).unwrap();
         encode(Sha256::digest(&votes)).into_string()
     }
@@ -74,16 +67,16 @@ impl Setting {
         }
     }
 
-    pub fn add_policy(&mut self, policy: Policy) {
-        if !self.policies.iter().any(|p|p.to_string()==policy.to_string()){
-            self.policies.push(policy);
+    pub fn add_plan(&mut self, plan: Plan) {
+        if !self.plans.iter().any(|p|p == &plan){
+            self.plans.push(plan);
         }
     }
 
-    pub fn delete_policy(&mut self, p: &str) -> Option<usize> {
-        match self.policies.iter().position(|v| match_by_string(v, p)) {
+    pub fn delete_plan(&mut self, other_title: &String) -> Option<usize> {
+        match self.plans.iter().position(|p| &p.title == other_title ) {
             Some(index) => {
-                self.policies.remove(index);
+                self.plans.remove(index);
                 Some(index)
             }
             None => None,
@@ -137,9 +130,9 @@ pub fn create_matrix(settings: &Setting) -> Array2<f64> {
 
     let voters = &settings.voters;
     // TODO: check for duplicates
-    let policies = &settings.policies;
+    let plans = &settings.plans;
 
-    let p_num = policies.len() + 1;
+    let p_num = plans.len() + 1;
 
     let elements_num = voters.len() + p_num;
 
@@ -151,7 +144,7 @@ pub fn create_matrix(settings: &Setting) -> Array2<f64> {
                 for (key, val) in vote.iter() {
                     let id = match voters.iter().position(|k| k == key) {
                         Some(n) => Some(n),
-                        None => match &policies.iter().position(|k| match_by_string(k, key)) {
+                        None => match &plans.iter().position(|k| &k.title == key) {
                             Some(n) => Some(n + voters.len()),
                             None => {
                                 println!("W: {} was not found in voters nor policies!", &key);
@@ -181,8 +174,8 @@ pub fn create_matrix(settings: &Setting) -> Array2<f64> {
         }
     }
 
-    let vp: Array2<f64> = Array::zeros((policies.len() + 1, voters.len()));
-    let pp: Array2<f64> = Array::eye(policies.len() + 1);
+    let vp: Array2<f64> = Array::zeros((plans.len() + 1, voters.len()));
+    let pp: Array2<f64> = Array::eye(plans.len() + 1);
 
     let leftpart = stack![Axis(1), vp, pp];
     let initial_matrix = stack![Axis(1), m, leftpart.t()];
@@ -214,7 +207,7 @@ pub fn calculate(m: Array2<f64>, num_voters: usize) -> (Vec<f64>, Vec<f64>) {
 
 pub fn poll_result(
     voters: &[String],
-    policies: &[Policy],
+    plans: &[Plan],
     result: (Vec<f64>, Vec<f64>),
 ) -> PollResult {
     let mut votes_r = HashMap::new();
@@ -223,9 +216,8 @@ pub fn poll_result(
 
     let (votes, influence) = result;
 
-    for (i, p) in policies.iter().enumerate() {
-        let d = format!("{}", p);
-        votes_r.insert(d.to_owned(), Some(votes.get(i).unwrap().to_owned()));
+    for (i, p) in plans.iter().enumerate() {
+        votes_r.insert(p.title.to_owned(), Some(votes.get(i).unwrap().to_owned()));
     }
 
     votes_r.insert("(Blank)".to_owned(), Some(votes.last().unwrap().to_owned()));
