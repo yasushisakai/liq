@@ -1,20 +1,20 @@
+use bs58::encode;
 use ndarray::{s, stack, Array, Array2, Axis};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use sha2::{Sha256, Digest};
-use bs58::encode;
+use sha2::{Digest, Sha256};
+use std::collections::BTreeMap;
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Plan{
+pub struct Plan {
     title: String,
-    description: Option<String>
+    description: Option<String>,
 }
 
 impl Plan {
-    fn new(title: String) -> Self {
-        Plan{
+    pub fn new(title: String) -> Self {
+        Plan {
             title,
-            description: None
+            description: None,
         }
     }
 }
@@ -25,7 +25,7 @@ impl PartialEq for Plan {
     }
 }
 
-impl Eq for Plan{}
+impl Eq for Plan {}
 
 // the design princicple of this struct is that it is human understandable,
 // and easy to edit. Editing a raw matrix will not be as straight forward
@@ -33,7 +33,7 @@ impl Eq for Plan{}
 pub struct Setting {
     voters: Vec<String>,
     plans: Vec<Plan>,
-    votes: HashMap<String, HashMap<String, f64>>,
+    votes: BTreeMap<String, BTreeMap<String, f64>>,
 }
 
 impl Setting {
@@ -41,17 +41,17 @@ impl Setting {
         Setting {
             voters: Vec::new(),
             plans: Vec::new(),
-            votes: HashMap::new(),
+            votes: BTreeMap::new(),
         }
     }
 
-    pub fn hash_base58(&self) -> String {
+    pub fn based_hash(&self) -> String {
         let votes = serde_json::to_vec(&self.votes).unwrap();
         encode(Sha256::digest(&votes)).into_string()
     }
 
     pub fn add_voter(&mut self, p: &str) {
-        if !self.voters.iter().any(|u|u==p){
+        if !self.voters.iter().any(|u| u == p) {
             self.voters.push(p.to_string());
         }
     }
@@ -68,13 +68,13 @@ impl Setting {
     }
 
     pub fn add_plan(&mut self, plan: Plan) {
-        if !self.plans.iter().any(|p|p == &plan){
+        if !self.plans.iter().any(|p| p == &plan) {
             self.plans.push(plan);
         }
     }
 
     pub fn delete_plan(&mut self, other_title: &String) -> Option<usize> {
-        match self.plans.iter().position(|p| &p.title == other_title ) {
+        match self.plans.iter().position(|p| &p.title == other_title) {
             Some(index) => {
                 self.plans.remove(index);
                 Some(index)
@@ -84,33 +84,38 @@ impl Setting {
     }
 
     pub fn cast_vote(&mut self, voter: &str, plan_or_voter: &str, value: f64) {
-
         if !self.voters.iter().any(|v| v == voter) {
-            return
+            return;
         }
 
-        if !self.plans.iter().any(|p| p.title == plan_or_voter) && 
-            !self.voters.iter().any(|v| v == plan_or_voter) {
-            return
+        if !self.plans.iter().any(|p| p.title == plan_or_voter)
+            && !self.voters.iter().any(|v| v == plan_or_voter)
+        {
+            return;
         }
 
-        match self.votes.keys().any(|v| v==voter) {
+        match self.votes.keys().any(|v| v == voter) {
             true => {
-                self.votes.get_mut(voter)
-                    .and_then(|vote|vote.insert(plan_or_voter.to_string(), value));
-            },
+                self.votes
+                    .get_mut(voter)
+                    .and_then(|vote| vote.insert(plan_or_voter.to_string(), value));
+            }
             false => {
-                let mut vote: HashMap<String, f64> = HashMap::new();
+                let mut vote: BTreeMap<String, f64> = BTreeMap::new();
                 vote.insert(plan_or_voter.to_string(), value);
                 self.votes.insert(voter.to_string(), vote);
             }
+        }
+    }
 
-        } 
-
+    pub fn overwrite_vote(&mut self, voter: &str, vote: BTreeMap<String, f64>) {
+        if self.voters.iter().any(|v| v == voter) {
+            self.votes.insert(voter.into(), vote);
+        }
     }
 
     pub fn purge_and_normalize(&mut self) {
-        let new_votes: HashMap<String, HashMap<String, f64>> = self
+        let new_votes: BTreeMap<String, BTreeMap<String, f64>> = self
             .votes
             .iter()
             .filter_map(|(voter, votes)| {
@@ -124,7 +129,7 @@ impl Setting {
                     return None;
                 };
 
-                let nv: HashMap<String, f64> = votes
+                let nv: BTreeMap<String, f64> = votes
                     .iter()
                     .filter_map(move |(to, vote)| {
                         if *vote == 0.0 {
@@ -140,17 +145,32 @@ impl Setting {
             .collect();
         self.votes = new_votes;
     }
+
+    pub fn calculate(&self) -> PollResult {
+        let mat = create_matrix(self);
+        let raw_result = calculate(mat, self.voters.len());
+        poll_result(&self.voters, &self.plans, raw_result)
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct PollResult {
-    votes: HashMap<String, Option<f64>>,
-    influence: HashMap<String, Option<f64>>,
+    votes: BTreeMap<String, Option<f64>>,
+    influence: BTreeMap<String, Option<f64>>,
+}
+
+impl PollResult {
+    pub fn based_hash(&self) -> String {
+        serde_json::to_vec(self)
+            .and_then(|v| Ok(Sha256::digest(&v)))
+            .and_then(|h| Ok(encode(h).into_string()))
+            .expect("Poll Result should be able to Serialize")
+    }
 }
 
 const ITERATION: u32 = 1000;
 
-pub fn create_matrix(settings: &Setting) -> Array2<f64> {
+fn create_matrix(settings: &Setting) -> Array2<f64> {
     // There will be one more policy added for calculation.
     // This is the default policy where voters vote placed by default
 
@@ -175,7 +195,7 @@ pub fn create_matrix(settings: &Setting) -> Array2<f64> {
                             None => {
                                 println!("W: {} was not found in voters nor policies!", &key);
                                 None
-                            },
+                            }
                         },
                     };
 
@@ -183,7 +203,6 @@ pub fn create_matrix(settings: &Setting) -> Array2<f64> {
                         m[[index, i]] = val.to_owned();
                     }
                 }
-
             }
             None => {
                 m[[elements_num - 1, i]] = 1.0;
@@ -209,8 +228,7 @@ pub fn create_matrix(settings: &Setting) -> Array2<f64> {
     initial_matrix
 }
 
-pub fn calculate(m: Array2<f64>, num_voters: usize) -> (Vec<f64>, Vec<f64>) {
-
+fn calculate(m: Array2<f64>, num_voters: usize) -> (Vec<f64>, Vec<f64>) {
     let square = m.shape()[0];
     let mut a = Array::eye(square);
     let mut sum = Array::eye(square);
@@ -220,7 +238,7 @@ pub fn calculate(m: Array2<f64>, num_voters: usize) -> (Vec<f64>, Vec<f64>) {
         sum += &a;
     }
 
-    let a = a.slice(s![.., 0..num_voters]); 
+    let a = a.slice(s![.., 0..num_voters]);
     let vote_results = a.sum_axis(Axis(1));
     let vote_results = vote_results.slice(s![num_voters..]).to_vec();
 
@@ -231,14 +249,10 @@ pub fn calculate(m: Array2<f64>, num_voters: usize) -> (Vec<f64>, Vec<f64>) {
     (vote_results, voters_influence)
 }
 
-pub fn poll_result(
-    voters: &[String],
-    plans: &[Plan],
-    result: (Vec<f64>, Vec<f64>),
-) -> PollResult {
-    let mut votes_r = HashMap::new();
+fn poll_result(voters: &[String], plans: &[Plan], result: (Vec<f64>, Vec<f64>)) -> PollResult {
+    let mut votes_r = BTreeMap::new();
 
-    let mut influences_r = HashMap::new();
+    let mut influences_r = BTreeMap::new();
 
     let (votes, influence) = result;
 
