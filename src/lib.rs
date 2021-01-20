@@ -31,9 +31,9 @@ impl Eq for Plan{}
 // and easy to edit. Editing a raw matrix will not be as straight forward
 #[derive(Deserialize, Serialize, Default, Debug)]
 pub struct Setting {
-    pub voters: Vec<String>,
-    pub plans: Vec<Plan>,
-    pub votes: HashMap<String, HashMap<String, f64>>,
+    voters: Vec<String>,
+    plans: Vec<Plan>,
+    votes: HashMap<String, HashMap<String, f64>>,
 }
 
 impl Setting {
@@ -83,6 +83,32 @@ impl Setting {
         }
     }
 
+    pub fn cast_vote(&mut self, voter: &str, plan_or_voter: &str, value: f64) {
+
+        if !self.voters.iter().any(|v| v == voter) {
+            return
+        }
+
+        if !self.plans.iter().any(|p| p.title == plan_or_voter) && 
+            !self.voters.iter().any(|v| v == plan_or_voter) {
+            return
+        }
+
+        match self.votes.keys().any(|v| v==voter) {
+            true => {
+                self.votes.get_mut(voter)
+                    .and_then(|vote|vote.insert(plan_or_voter.to_string(), value));
+            },
+            false => {
+                let mut vote: HashMap<String, f64> = HashMap::new();
+                vote.insert(plan_or_voter.to_string(), value);
+                self.votes.insert(voter.to_string(), vote);
+            }
+
+        } 
+
+    }
+
     pub fn purge_and_normalize(&mut self) {
         let new_votes: HashMap<String, HashMap<String, f64>> = self
             .votes
@@ -118,8 +144,8 @@ impl Setting {
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct PollResult {
-    pub votes: HashMap<String, Option<f64>>,
-    pub influence: HashMap<String, Option<f64>>,
+    votes: HashMap<String, Option<f64>>,
+    influence: HashMap<String, Option<f64>>,
 }
 
 const ITERATION: u32 = 1000;
