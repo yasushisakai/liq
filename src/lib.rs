@@ -2,6 +2,8 @@ use ndarray::{s, stack, Array, Array2, Axis};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
+use sha2::{Sha256, Digest};
+use bs58::encode;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum Policy {
@@ -30,20 +32,29 @@ pub fn match_by_string(policy: &Policy, id: &str) -> bool {
 // and easy to edit. Editing a raw matrix will not be as straight forward
 #[derive(Deserialize, Serialize, Default, Debug)]
 pub struct Setting {
+    pub id: String,
     pub title: Option<String>,
     pub voters: Vec<String>,
     pub policies: Vec<Policy>,
+    pub prev_id: String,
     pub votes: HashMap<String, HashMap<String, f64>>,
 }
 
 impl Setting {
     pub fn new() -> Self {
         Setting {
+            id: String::new(),
+            prev_id: String::new(),
             title: None,
             voters: Vec::new(),
             policies: Vec::new(),
             votes: HashMap::new(),
         }
+    }
+
+    pub fn compute_id(&self) -> String {
+        let votes = serde_json::to_vec(&self.votes).unwrap();
+        encode(Sha256::digest(&votes)).into_string()
     }
 
     pub fn add_voter(&mut self, p: &str) {
