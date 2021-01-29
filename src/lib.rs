@@ -2,7 +2,8 @@ use bs58::encode;
 use ndarray::{s, stack, Array, Array2, Axis};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::collections::BTreeMap;
+use std::collections::{HashSet, BTreeMap};
+use std::iter::FromIterator;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Plan {
@@ -72,6 +73,10 @@ impl Setting {
             self.plans.push(plan);
         }
     }
+
+    pub fn get_voters(&self) -> HashSet<String> {
+        HashSet::from_iter(self.voters.iter().map(|v|v.to_string())) 
+    } 
 
     pub fn delete_plan(&mut self, other_title: &String) -> Option<usize> {
         match self.plans.iter().position(|p| &p.title == other_title) {
