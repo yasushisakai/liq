@@ -5,28 +5,7 @@ use sha2::{Digest, Sha256};
 use std::collections::{HashSet, BTreeMap};
 use std::iter::FromIterator;
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct Plan {
-    title: String,
-    description: Option<String>,
-}
-
-impl Plan {
-    pub fn new(title: String) -> Self {
-        Plan {
-            title,
-            description: None,
-        }
-    }
-}
-
-impl PartialEq for Plan {
-    fn eq(&self, other: &Self) -> bool {
-        self.title == other.title
-    }
-}
-
-impl Eq for Plan {}
+type Plan = String;
 
 // the design princicple of this struct is that it is human understandable,
 // and easy to edit. Editing a raw matrix will not be as straight forward
@@ -78,8 +57,8 @@ impl Setting {
         HashSet::from_iter(self.voters.iter().map(|v|v.to_string())) 
     } 
 
-    pub fn delete_plan(&mut self, other_title: &String) -> Option<usize> {
-        match self.plans.iter().position(|p| &p.title == other_title) {
+    pub fn delete_plan(&mut self, other: &Plan) -> Option<usize> {
+        match self.plans.iter().position(|p| p == other) {
             Some(index) => {
                 self.plans.remove(index);
                 Some(index)
@@ -93,7 +72,7 @@ impl Setting {
             return;
         }
 
-        if !self.plans.iter().any(|p| p.title == plan_or_voter)
+        if !self.plans.iter().any(|p| p == plan_or_voter)
             && !self.voters.iter().any(|v| v == plan_or_voter)
         {
             return;
@@ -195,7 +174,7 @@ fn create_matrix(settings: &Setting) -> Array2<f64> {
                 for (key, val) in vote.iter() {
                     let id = match voters.iter().position(|k| k == key) {
                         Some(n) => Some(n),
-                        None => match &plans.iter().position(|k| &k.title == key) {
+                        None => match &plans.iter().position(|k| &k == &key) {
                             Some(n) => Some(n + voters.len()),
                             None => {
                                 println!("W: {} was not found in voters nor policies!", &key);
@@ -262,7 +241,7 @@ fn poll_result(voters: &[String], plans: &[Plan], result: (Vec<f64>, Vec<f64>)) 
     let (votes, influence) = result;
 
     for (i, p) in plans.iter().enumerate() {
-        votes_r.insert(p.title.to_owned(), Some(votes.get(i).unwrap().to_owned()));
+        votes_r.insert(p.to_owned(), Some(votes.get(i).unwrap().to_owned()));
     }
 
     votes_r.insert("(Blank)".to_owned(), Some(votes.last().unwrap().to_owned()));
