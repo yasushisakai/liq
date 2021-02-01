@@ -5,14 +5,12 @@ use sha2::{Digest, Sha256};
 use std::collections::{HashSet, BTreeMap};
 use std::iter::FromIterator;
 
-type Plan = String;
-
 // the design princicple of this struct is that it is human understandable,
 // and easy to edit. Editing a raw matrix will not be as straight forward
 #[derive(Deserialize, Serialize, Default, Debug)]
 pub struct Setting {
     voters: Vec<String>,
-    plans: Vec<Plan>,
+    plans: Vec<String>,
     votes: BTreeMap<String, BTreeMap<String, f64>>,
 }
 
@@ -47,9 +45,9 @@ impl Setting {
         }
     }
 
-    pub fn add_plan(&mut self, plan: Plan) {
-        if !self.plans.iter().any(|p| p == &plan) {
-            self.plans.push(plan);
+    pub fn add_plan(&mut self, plan: &str) {
+        if !self.plans.iter().any(|p| p == plan) {
+            self.plans.push(plan.to_string());
         }
     }
 
@@ -57,7 +55,7 @@ impl Setting {
         HashSet::from_iter(self.voters.iter().map(|v|v.to_string())) 
     } 
 
-    pub fn delete_plan(&mut self, other: &Plan) -> Option<usize> {
+    pub fn delete_plan(&mut self, other: &str) -> Option<usize> {
         match self.plans.iter().position(|p| p == other) {
             Some(index) => {
                 self.plans.remove(index);
@@ -233,7 +231,7 @@ fn calculate(m: Array2<f64>, num_voters: usize) -> (Vec<f64>, Vec<f64>) {
     (vote_results, voters_influence)
 }
 
-fn poll_result(voters: &[String], plans: &[Plan], result: (Vec<f64>, Vec<f64>)) -> PollResult {
+fn poll_result(voters: &[String], plans: &[String], result: (Vec<f64>, Vec<f64>)) -> PollResult {
     let mut votes_r = BTreeMap::new();
 
     let mut influences_r = BTreeMap::new();
